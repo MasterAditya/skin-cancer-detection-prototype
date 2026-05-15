@@ -2,6 +2,7 @@
 
 import streamlit as st
 import numpy as np
+from utils.constants import LABEL_NAMES
 
 
 def render_header(title, subtitle):
@@ -146,52 +147,6 @@ def render_clinical_recommendation(recommendation, risk):
     )
 
 
-def render_probability_distribution(probabilities, label_names):
-    """Elite probability distribution with charts"""
-    st.markdown('<div class="section-header">📊 Model Confidence Distribution</div>', unsafe_allow_html=True)
-    
-    prob_data = dict(zip(label_names, probabilities[0]))
-    predicted_idx = probabilities[0].argmax()
-    
-    # Create two sub-columns for layout
-    chart_col, detail_col = st.columns([2, 1], gap="large")
-    
-    with chart_col:
-        # Horizontal bar chart using Streamlit native capabilities
-        colors = ['#42a5f5' if i == predicted_idx else '#64748b' for i in range(len(label_names))]
-        
-        for i, (class_name, prob) in enumerate(prob_data.items()):
-            prob_pct = prob * 100
-            is_predicted = i == predicted_idx
-            
-            st.markdown(
-                f"""
-                <div style="margin-bottom: 1rem;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
-                        <span style="font-weight: {'700' if is_predicted else '500'}; color: {'#42a5f5' if is_predicted else '#90caf9'}; text-transform: uppercase; font-size: 0.85rem;">{class_name.upper()}</span>
-                        <span style="color: {'#42a5f5' if is_predicted else '#90caf9'}; font-weight: 700;">{prob_pct:.1f}%</span>
-                    </div>
-                    <div class="probability-bar">
-                        <div class="probability-fill" style="width: {prob_pct}%; background: {'linear-gradient(90deg, #42a5f5 0%, #64b5f6 100%)' if is_predicted else 'rgba(100, 181, 246, 0.4)'}; box-shadow: {'0 0 15px rgba(66, 165, 245, 0.5)' if is_predicted else 'none'};"></div>
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-    
-    with detail_col:
-        st.markdown(
-            f"""
-            <div class="tech-panel" style="margin-top: 0;">
-                <div class="tech-detail">
-                    <b>Maximum Confidence:</b><br>
-                    {label_names[predicted_idx].upper()}<br>
-                    {probabilities[0][predicted_idx]*100:.1f}%
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
 
 
 def render_explainability_section(original_image, overlay):
@@ -431,28 +386,45 @@ def render_session_history(history_data: list = None):
 
 
 def render_image_metadata_details(filename: str, size_bytes: int, prediction: dict, image_details: dict = None):
-    """Enhanced image metadata panel"""
-    st.markdown("### 📊 Image & Analysis Metadata")
+    """Clinical analysis summary panel for dermatologists"""
+    st.markdown("### 📊 Analysis Summary")
     
     col1, col2 = st.columns(2)
     
     with col1:
-        st.metric("Filename", filename, delta=None)
-        st.metric("File Size", f"{size_bytes/1024:.1f} KB", delta=None)
+        st.metric("Classification", prediction.get('label', 'N/A').upper(), delta=None)
+        confidence_pct = prediction.get('confidence', 0) * 100
+        st.metric("Model Confidence", f"{confidence_pct:.1f}%", delta=None)
     
     with col2:
-        st.metric("Prediction", prediction.get('label', 'N/A').upper(), delta=None)
-        st.metric("Confidence", f"{prediction.get('confidence', 0)*100:.1f}%", delta=None)
-    
-    if image_details:
-        st.markdown("**Image Properties:**")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.caption(f"Resolution: {image_details.get('resolution', 'N/A')}")
-        with col2:
-            st.caption(f"Format: {image_details.get('format', 'N/A')}")
-        with col3:
-            st.caption(f"Mode: {image_details.get('mode', 'RGB')}")
+        # Determine confidence level for clinical context
+        if confidence_pct >= 85:
+            confidence_level = "🟢 High"
+        elif confidence_pct >= 70:
+            confidence_level = "🟡 Moderate"
+        else:
+            confidence_level = "🔴 Low"
+        
+        st.metric("Confidence Level", confidence_level, delta=None)
+        
+        # Show probability distribution summary
+        probs = prediction.get('probabilities', None)
+        if probs is not None and len(probs) > 0:
+            try:
+                # probs is a numpy array (batch, classes), take first row
+                prob_array = probs[0] if len(probs.shape) > 1 else probs
+                
+                # Create pairs of (class_name, probability)
+                class_probs = [(LABEL_NAMES[i], float(prob_array[i])) for i in range(len(LABEL_NAMES))]
+                
+                # Sort by probability descending and get top 2
+                top_two = sorted(class_probs, key=lambda x: x[1], reverse=True)[:2]
+                
+                if len(top_two) > 1:
+                    diff = (top_two[0][1] - top_two[1][1]) * 100
+                    st.metric("Differentiation", f"+{diff:.1f}%", delta=None)
+            except (TypeError, ValueError, IndexError):
+                pass
 
 
 def render_analysis_progress(stage: str = "idle"):
@@ -574,3 +546,159 @@ def render_compact_history(history_data: list = None):
             f"• {entry.get('label', '?').upper()} "
             f"({entry.get('confidence', 0)*100:.0f}%)"
         )
+
+
+# ========== CLINICAL DECISION SUPPORT COMPONENTS ==========
+
+def render_differential_diagnosis(probabilities):
+    """Display all class probabilities ranked for clinical context"""
+    st.markdown("### 📊 Differential Diagnosis Ranking")
+    
+    try:
+        # Convert numpy array to list and ensure float values
+        prob_array = probabilities[0] if len(probabilities.shape) > 1 else probabilities
+        
+        # Create ranked list with class names
+        class_probs = [(LABEL_NAMES[i], float(prob_array[i]) * 100) for i in range(len(LABEL_NAMES))]
+        
+        # Sort by probability descending
+        ranked = sorted(class_probs, key=lambda x: x[1], reverse=True)
+        
+        # Display as ranked list with visual indicators
+        col1, col2, col3 = st.columns([1, 2, 1.5])
+        
+        for rank, (class_name, prob) in enumerate(ranked, 1):
+            # Color code based on rank and probability
+            if rank == 1:
+                icon = "🔴"  # Top prediction
+                color_class = "high-risk"
+            elif rank == 2:
+                icon = "🟡"
+                color_class = "moderate-risk"
+            elif rank == 3:
+                icon = "🟠"
+                color_class = "uncertain"
+            else:
+                icon = "⚪"
+                color_class = "low-risk"
+            
+            with col1:
+                st.caption(f"{icon} {rank}. **{class_name.upper()}**")
+            with col2:
+                st.caption(f"{prob:.1f}%")
+            with col3:
+                # Progress bar
+                st.progress(prob / 100.0)
+    
+    except Exception as e:
+        st.caption(f"Unable to display differential diagnosis: {str(e)}")
+
+
+def render_followup_intervals(pred_label, confidence_pct):
+    """Clinical follow-up interval recommendations based on diagnosis and confidence"""
+    st.markdown("### 📅 Clinical Follow-Up Recommendation")
+    
+    followup_guidance = {
+        "melanoma": {
+            "high": {
+                "interval": "⏰ IMMEDIATE",
+                "guidance": "Urgent dermatologist review and biopsy evaluation required. Do NOT delay.",
+                "monitoring": "Same-day or next-day specialist appointment"
+            },
+            "moderate": {
+                "interval": "⏰ URGENT (1-2 weeks)",
+                "guidance": "Prompt specialist evaluation advised. Schedule appointment within 1-2 weeks.",
+                "monitoring": "Consider dermoscopy and/or biopsy confirmation"
+            },
+            "low": {
+                "interval": "⏰ EXPEDITED (2-4 weeks)",
+                "guidance": "Specialist review recommended. Schedule within 2-4 weeks.",
+                "monitoring": "Clinical assessment, possible dermoscopy"
+            }
+        },
+        "bcc": {
+            "high": {
+                "interval": "⏰ SOON (2-4 weeks)",
+                "guidance": "Clinical review and likely biopsy recommended within 2-4 weeks.",
+                "monitoring": "Treatment planning (excision, curettage, cryotherapy, topical)"
+            },
+            "low": {
+                "interval": "⏰ ROUTINE (4-8 weeks)",
+                "guidance": "Specialist evaluation advised. Can be scheduled within routine timeframe.",
+                "monitoring": "Confirm diagnosis before treatment"
+            }
+        },
+        "nevus": {
+            "high": {
+                "interval": "📸 BASELINE PHOTO (Annual)",
+                "guidance": "Low-risk benign lesion. Photograph now for baseline comparison.",
+                "monitoring": "Annual review; alert patient to watch for changes (growth, color change, itching)"
+            },
+            "low": {
+                "interval": "📸 BASELINE PHOTO (Annual)",
+                "guidance": "Reassuring result. Document with photograph for future comparison.",
+                "monitoring": "Routine skin surveillance; patient education on skin self-exam"
+            }
+        },
+        "other": {
+            "high": {
+                "interval": "⏰ REVIEW (2-6 weeks)",
+                "guidance": "Ambiguous lesion. Specialist evaluation recommended.",
+                "monitoring": "Clinical assessment to clarify diagnosis"
+            },
+            "low": {
+                "interval": "⏰ REVIEW (4-8 weeks)",
+                "guidance": "Ambiguous lesion. Schedule routine specialist review.",
+                "monitoring": "Further evaluation to establish diagnosis"
+            }
+        }
+    }
+    
+    # Determine confidence level
+    if confidence_pct >= 85:
+        conf_level = "high"
+        conf_icon = "🟢"
+    elif confidence_pct >= 70:
+        conf_level = "moderate"
+        conf_icon = "🟡"
+    else:
+        conf_level = "low"
+        conf_icon = "🔴"
+    
+    # Get guidance
+    guidance = followup_guidance.get(pred_label, followup_guidance["other"]).get(conf_level)
+    
+    if guidance:
+        st.markdown(
+            f"""
+            <div class="prediction-card">
+                <div style="font-size: 1.1rem; font-weight: bold; margin-bottom: 0.5rem;">
+                    {guidance['interval']}
+                </div>
+                <div style="font-size: 0.95rem; margin-bottom: 0.5rem;">
+                    {conf_icon} {guidance['guidance']}
+                </div>
+                <div style="font-size: 0.85rem; color: #666; margin-top: 0.5rem;">
+                    <b>Monitoring:</b> {guidance['monitoring']}
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+
+
+def render_sensitivity_specificity_disclosure():
+    """Research prototype disclaimer"""
+    st.markdown(
+        """
+        <div style="background-color: #fff8e1; border-left: 4px solid #ff9800; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+            <div style="font-weight: bold; color: #e65100; margin-bottom: 0.5rem;">
+                ⚠️ Important: This is a research prototype, not a diagnostic device
+            </div>
+            <div style="font-size: 0.9rem; color: #bf360c;">
+                This model is a clinical decision <b>support tool</b>, not a replacement for expert clinical judgment.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )

@@ -22,12 +22,13 @@ from ui.components import (
     render_disclaimer,
     render_prediction_metrics,
     render_clinical_recommendation,
-    render_probability_distribution,
     render_explainability_section,
     render_technical_details,
     render_footer,
     render_image_metadata_details,
-    render_compact_history
+    render_compact_history,
+    render_differential_diagnosis,
+    render_followup_intervals
 )
 from ui.styling import apply_custom_css
 
@@ -207,11 +208,14 @@ with tab1:
         
         st.markdown("---")
         
-        # Probability distribution
-        render_probability_distribution(
-            prediction["probabilities"],
-            LABEL_NAMES
-        )
+        # Differential diagnosis (all class probabilities)
+        render_differential_diagnosis(prediction["probabilities"])
+        
+        st.markdown("---")
+        
+        # Follow-up intervals
+        confidence_pct = prediction["confidence"] * 100
+        render_followup_intervals(prediction["label"], confidence_pct)
         
         st.markdown("---")
         
@@ -342,11 +346,14 @@ with tab1:
         
         st.markdown("---")
         
-        # Probability distribution
-        render_probability_distribution(
-            prediction["probabilities"],
-            LABEL_NAMES
-        )
+        # Differential diagnosis (all class probabilities)
+        render_differential_diagnosis(prediction["probabilities"])
+        
+        st.markdown("---")
+        
+        # Follow-up intervals
+        confidence_pct = prediction["confidence"] * 100
+        render_followup_intervals(prediction["label"], confidence_pct)
         
         st.markdown("---")
         
