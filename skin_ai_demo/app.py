@@ -57,6 +57,10 @@ if "demo_mode" not in st.session_state:
     st.session_state.demo_mode = None
 if "sample_images" not in st.session_state:
     st.session_state.sample_images = get_sample_images()
+if "pdf_data" not in st.session_state:
+    st.session_state.pdf_data = None
+if "gradcam_data" not in st.session_state:
+    st.session_state.gradcam_data = None
 
 # ========== MODEL LOADING & INITIALIZATION ==========
 
@@ -244,13 +248,16 @@ with tab1:
         with col1:
             if st.button("📄 Export PDF Report", use_container_width=True, key="export_pdf"):
                 try:
-                    pdf_data = generate_clinical_report_pdf(st.session_state.prediction_data)
+                    pdf_bytes = generate_clinical_report_pdf(st.session_state.prediction_data)
+                    st.session_state.pdf_data = pdf_bytes
+                    st.success("✅ PDF generated - downloading...")
                     st.download_button(
                         label="📥 Download PDF",
-                        data=pdf_data,
-                        file_name=f"clinical_report_{prediction['label']}.pdf",
+                        data=pdf_bytes,
+                        file_name=f"clinical_report_{st.session_state.prediction_data['prediction']['label']}.pdf",
                         mime="application/pdf",
-                        use_container_width=True
+                        use_container_width=True,
+                        key="pdf_download_immediate"
                     )
                 except Exception as e:
                     st.error(f"PDF generation error: {str(e)}")
@@ -258,14 +265,21 @@ with tab1:
         with col2:
             if st.button("🖼️ Export Grad-CAM", use_container_width=True, key="export_gradcam"):
                 try:
-                    gradcam_png = generate_gradcam_png(overlay)
-                    st.download_button(
-                        label="📥 Download PNG",
-                        data=gradcam_png,
-                        file_name=f"gradcam_heatmap_{prediction['label']}.png",
-                        mime="image/png",
-                        use_container_width=True
-                    )
+                    overlay_data = st.session_state.prediction_data.get("overlay")
+                    if overlay_data:
+                        gradcam_bytes = generate_gradcam_png(overlay_data)
+                        st.session_state.gradcam_data = gradcam_bytes
+                        st.success("✅ Grad-CAM PNG generated - downloading...")
+                        st.download_button(
+                            label="📥 Download PNG",
+                            data=gradcam_bytes,
+                            file_name=f"gradcam_heatmap_{st.session_state.prediction_data['prediction']['label']}.png",
+                            mime="image/png",
+                            use_container_width=True,
+                            key="gradcam_download_immediate"
+                        )
+                    else:
+                        st.error("No Grad-CAM data available")
                 except Exception as e:
                     st.error(f"Grad-CAM export error: {str(e)}")
     
@@ -382,13 +396,16 @@ with tab1:
         with col1:
             if st.button("📄 Export PDF Report", use_container_width=True, key="export_pdf_demo"):
                 try:
-                    pdf_data = generate_clinical_report_pdf(st.session_state.prediction_data)
+                    pdf_bytes = generate_clinical_report_pdf(st.session_state.prediction_data)
+                    st.session_state.pdf_data = pdf_bytes
+                    st.success("✅ PDF generated - downloading...")
                     st.download_button(
                         label="📥 Download PDF",
-                        data=pdf_data,
-                        file_name=f"clinical_report_{prediction['label']}.pdf",
+                        data=pdf_bytes,
+                        file_name=f"clinical_report_{st.session_state.prediction_data['prediction']['label']}.pdf",
                         mime="application/pdf",
-                        use_container_width=True
+                        use_container_width=True,
+                        key="pdf_download_demo_immediate"
                     )
                 except Exception as e:
                     st.error(f"PDF generation error: {str(e)}")
@@ -396,24 +413,31 @@ with tab1:
         with col2:
             if st.button("🖼️ Export Grad-CAM", use_container_width=True, key="export_gradcam_demo"):
                 try:
-                    gradcam_png = generate_gradcam_png(overlay)
-                    st.download_button(
-                        label="📥 Download PNG",
-                        data=gradcam_png,
-                        file_name=f"gradcam_heatmap_{prediction['label']}.png",
-                        mime="image/png",
-                        use_container_width=True
-                    )
+                    overlay_data = st.session_state.prediction_data.get("overlay")
+                    if overlay_data:
+                        gradcam_bytes = generate_gradcam_png(overlay_data)
+                        st.session_state.gradcam_data = gradcam_bytes
+                        st.success("✅ Grad-CAM PNG generated - downloading...")
+                        st.download_button(
+                            label="📥 Download PNG",
+                            data=gradcam_bytes,
+                            file_name=f"gradcam_heatmap_{st.session_state.prediction_data['prediction']['label']}.png",
+                            mime="image/png",
+                            use_container_width=True,
+                            key="gradcam_download_demo_immediate"
+                        )
+                    else:
+                        st.error("No Grad-CAM data available")
                 except Exception as e:
                     st.error(f"Grad-CAM export error: {str(e)}")
     
     else:
         st.info(
             "👆 **Getting Started**\n\n"
-            "1. Upload a high-quality dermoscopic image from the sidebar, or\n"
-            "2. Try demo mode with sample images\n"
-            "3. Click 'Run AI Clinical Assessment'\n"
-            "4. View the clinical predictions and risk assessment"
+            "1. Upload a high-quality dermoscopic image from the sidebar\n"
+            "2. Click the '🔍 Assess' button to run AI analysis\n"
+            "3. View the clinical predictions and risk assessment\n"
+            "4. Export the results as PDF or Grad-CAM heatmap"
         )
 
 # ========== TAB 2: EXPLAINABILITY ==========

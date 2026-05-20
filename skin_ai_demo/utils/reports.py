@@ -103,10 +103,19 @@ def generate_clinical_report_pdf(
     
     # Probability distribution table
     story.append(Paragraph("Classification Probabilities", heading_style))
-    probabilities = prediction.get("probabilities", {})
+    probabilities = prediction.get("probabilities", [])
     prob_data = [["Classification", "Probability"]]
-    for label, prob in probabilities.items():
-        prob_data.append([label.capitalize(), f"{prob*100:.2f}%"])
+    
+    # Handle numpy array or dict
+    if hasattr(probabilities, 'items'):
+        for label, prob in probabilities.items():
+            prob_data.append([label.capitalize(), f"{prob*100:.2f}%"])
+    else:
+        # Numpy array - use LABEL_NAMES
+        from utils.constants import LABEL_NAMES
+        for i, prob in enumerate(probabilities.flat if hasattr(probabilities, 'flat') else probabilities):
+            if i < len(LABEL_NAMES):
+                prob_data.append([LABEL_NAMES[i].capitalize(), f"{prob*100:.2f}%"])
     
     prob_table = Table(prob_data, colWidths=[3*inch, 2*inch])
     prob_table.setStyle(TableStyle([
