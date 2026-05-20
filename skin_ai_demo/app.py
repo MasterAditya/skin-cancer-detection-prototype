@@ -243,45 +243,56 @@ with tab1:
         st.markdown("---")
         
         # Export section
+        st.markdown("---")
+        st.markdown("### 📥 Export Results")
+        
         col1, col2 = st.columns(2)
         
         with col1:
-            if st.button("📄 Export PDF Report", use_container_width=True, key="export_pdf"):
+            st.markdown("**📄 Clinical Report (PDF)**")
+            if st.button("Generate & Download PDF", use_container_width=True, key="export_pdf"):
                 try:
                     pdf_bytes = generate_clinical_report_pdf(st.session_state.prediction_data)
                     st.session_state.pdf_data = pdf_bytes
-                    st.success("✅ PDF generated - downloading...")
-                    st.download_button(
-                        label="📥 Download PDF",
-                        data=pdf_bytes,
-                        file_name=f"clinical_report_{st.session_state.prediction_data['prediction']['label']}.pdf",
-                        mime="application/pdf",
-                        use_container_width=True,
-                        key="pdf_download_immediate"
-                    )
+                    st.success("✅ PDF ready to download!")
                 except Exception as e:
-                    st.error(f"PDF generation error: {str(e)}")
+                    st.error(f"❌ PDF Error: {str(e)}")
+            
+            # Show download button if PDF data exists
+            if st.session_state.pdf_data:
+                st.download_button(
+                    label="⬇️ Download PDF Report",
+                    data=st.session_state.pdf_data,
+                    file_name=f"clinical_report_{st.session_state.prediction_data['prediction']['label']}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    key="pdf_download_btn"
+                )
         
         with col2:
-            if st.button("🖼️ Export Grad-CAM", use_container_width=True, key="export_gradcam"):
+            st.markdown("**🔥 Grad-CAM Heatmap (PNG)**")
+            if st.button("Generate & Download Grad-CAM", use_container_width=True, key="export_gradcam"):
                 try:
                     overlay_data = st.session_state.prediction_data.get("overlay")
                     if overlay_data:
                         gradcam_bytes = generate_gradcam_png(overlay_data)
                         st.session_state.gradcam_data = gradcam_bytes
-                        st.success("✅ Grad-CAM PNG generated - downloading...")
-                        st.download_button(
-                            label="📥 Download PNG",
-                            data=gradcam_bytes,
-                            file_name=f"gradcam_heatmap_{st.session_state.prediction_data['prediction']['label']}.png",
-                            mime="image/png",
-                            use_container_width=True,
-                            key="gradcam_download_immediate"
-                        )
+                        st.success("✅ Grad-CAM ready to download!")
                     else:
-                        st.error("No Grad-CAM data available")
+                        st.error("❌ No overlay data")
                 except Exception as e:
-                    st.error(f"Grad-CAM export error: {str(e)}")
+                    st.error(f"❌ Error: {str(e)}")
+            
+            # Show download button if Grad-CAM data exists
+            if st.session_state.gradcam_data:
+                st.download_button(
+                    label="⬇️ Download Grad-CAM PNG",
+                    data=st.session_state.gradcam_data,
+                    file_name=f"gradcam_heatmap_{st.session_state.prediction_data['prediction']['label']}.png",
+                    mime="image/png",
+                    use_container_width=True,
+                    key="gradcam_download_btn"
+                )
     
     elif st.session_state.demo_mode and run_analysis:
         
@@ -391,45 +402,55 @@ with tab1:
         st.markdown("---")
         
         # Export section
+        st.markdown("### 📥 Export Results")
+        
         col1, col2 = st.columns(2)
         
         with col1:
-            if st.button("📄 Export PDF Report", use_container_width=True, key="export_pdf_demo"):
+            st.markdown("**📄 Clinical Report (PDF)**")
+            if st.button("Generate & Download PDF", use_container_width=True, key="export_pdf_demo"):
                 try:
                     pdf_bytes = generate_clinical_report_pdf(st.session_state.prediction_data)
                     st.session_state.pdf_data = pdf_bytes
-                    st.success("✅ PDF generated - downloading...")
-                    st.download_button(
-                        label="📥 Download PDF",
-                        data=pdf_bytes,
-                        file_name=f"clinical_report_{st.session_state.prediction_data['prediction']['label']}.pdf",
-                        mime="application/pdf",
-                        use_container_width=True,
-                        key="pdf_download_demo_immediate"
-                    )
+                    st.success("✅ PDF ready to download!")
                 except Exception as e:
-                    st.error(f"PDF generation error: {str(e)}")
+                    st.error(f"❌ PDF Error: {str(e)}")
+            
+            # Show download button if PDF data exists
+            if st.session_state.pdf_data:
+                st.download_button(
+                    label="⬇️ Download PDF Report",
+                    data=st.session_state.pdf_data,
+                    file_name=f"clinical_report_{st.session_state.prediction_data['prediction']['label']}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True,
+                    key="pdf_download_btn_demo"
+                )
         
         with col2:
-            if st.button("🖼️ Export Grad-CAM", use_container_width=True, key="export_gradcam_demo"):
+            st.markdown("**🔥 Grad-CAM Heatmap (PNG)**")
+            if st.button("Generate & Download Grad-CAM", use_container_width=True, key="export_gradcam_demo"):
                 try:
                     overlay_data = st.session_state.prediction_data.get("overlay")
                     if overlay_data:
                         gradcam_bytes = generate_gradcam_png(overlay_data)
                         st.session_state.gradcam_data = gradcam_bytes
-                        st.success("✅ Grad-CAM PNG generated - downloading...")
-                        st.download_button(
-                            label="📥 Download PNG",
-                            data=gradcam_bytes,
-                            file_name=f"gradcam_heatmap_{st.session_state.prediction_data['prediction']['label']}.png",
-                            mime="image/png",
-                            use_container_width=True,
-                            key="gradcam_download_demo_immediate"
-                        )
+                        st.success("✅ Grad-CAM ready to download!")
                     else:
-                        st.error("No Grad-CAM data available")
+                        st.error("❌ No overlay data")
                 except Exception as e:
-                    st.error(f"Grad-CAM export error: {str(e)}")
+                    st.error(f"❌ Error: {str(e)}")
+            
+            # Show download button if Grad-CAM data exists
+            if st.session_state.gradcam_data:
+                st.download_button(
+                    label="⬇️ Download Grad-CAM PNG",
+                    data=st.session_state.gradcam_data,
+                    file_name=f"gradcam_heatmap_{st.session_state.prediction_data['prediction']['label']}.png",
+                    mime="image/png",
+                    use_container_width=True,
+                    key="gradcam_download_btn_demo"
+                )
     
     else:
         st.info(
