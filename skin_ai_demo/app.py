@@ -283,7 +283,7 @@ with tab1:
             if st.button("Generate & Download Grad-CAM", use_container_width=True, key="export_gradcam"):
                 try:
                     overlay_data = st.session_state.prediction_data.get("overlay")
-                    if overlay_data:
+                    if overlay_data is not None:
                         gradcam_bytes = generate_gradcam_png(overlay_data)
                         st.session_state.gradcam_data = gradcam_bytes
                         st.success("✅ Grad-CAM ready to download!")
