@@ -192,7 +192,16 @@ with tab1:
             st.session_state.analysis_history.append(history_entry)
         
         st.success("✅ Analysis complete")
-        st.markdown("---")
+    
+    # ===== DISPLAY RESULTS (if analysis is complete) =====
+    if st.session_state.analysis_complete and st.session_state.prediction_data:
+        # Extract data from session state
+        original_image = st.session_state.prediction_data["original_image"]
+        overlay = st.session_state.prediction_data["overlay"]
+        prediction = st.session_state.prediction_data["prediction"]
+        risk_result = st.session_state.prediction_data["risk_result"]
+        image_filename = st.session_state.prediction_data["filename"]
+        image_size = st.session_state.prediction_data["file_size"]
         
         # Display prediction metrics
         st.markdown("### 📋 Prediction Results")
@@ -351,106 +360,6 @@ with tab1:
         
         st.success("✅ Demo analysis complete")
         st.info(f"Sample: {get_sample_image_description(st.session_state.demo_mode)}")
-        st.markdown("---")
-        
-        # Display prediction metrics
-        st.markdown("### 📋 Prediction Results")
-        render_prediction_metrics(
-            prediction["label"],
-            prediction["confidence"],
-            risk_result["risk"]
-        )
-        
-        st.markdown("---")
-        
-        # Clinical recommendation
-        render_clinical_recommendation(
-            risk_result["recommendation"],
-            risk_result["risk"]
-        )
-        
-        st.markdown("---")
-        
-        # Differential diagnosis (all class probabilities)
-        render_differential_diagnosis(prediction["probabilities"])
-        
-        st.markdown("---")
-        
-        # Follow-up intervals
-        confidence_pct = prediction["confidence"] * 100
-        render_followup_intervals(prediction["label"], confidence_pct)
-        
-        st.markdown("---")
-        
-        # Input image and metadata
-        col1, col2 = st.columns([1, 2])
-        with col1:
-            st.markdown("### 🖼️ Demo Sample Image")
-            st.image(original_image, use_container_width=True)
-        with col2:
-            render_image_metadata_details(
-                mock_file.name,
-                mock_file.size,
-                prediction,
-                image_details={
-                    "resolution": f"{original_image.size[0]}×{original_image.size[1]}",
-                    "format": "PNG (synthetic demo)",
-                    "mode": original_image.mode
-                }
-            )
-        
-        st.markdown("---")
-        
-        # Export section
-        st.markdown("### 📥 Export Results")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("**📄 Clinical Report (PDF)**")
-            if st.button("Generate & Download PDF", use_container_width=True, key="export_pdf_demo"):
-                try:
-                    pdf_bytes = generate_clinical_report_pdf(st.session_state.prediction_data)
-                    st.session_state.pdf_data = pdf_bytes
-                    st.success("✅ PDF ready to download!")
-                except Exception as e:
-                    st.error(f"❌ PDF Error: {str(e)}")
-            
-            # Show download button if PDF data exists
-            if st.session_state.pdf_data:
-                st.download_button(
-                    label="⬇️ Download PDF Report",
-                    data=st.session_state.pdf_data,
-                    file_name=f"clinical_report_{st.session_state.prediction_data['prediction']['label']}.pdf",
-                    mime="application/pdf",
-                    use_container_width=True,
-                    key="pdf_download_btn_demo"
-                )
-        
-        with col2:
-            st.markdown("**🔥 Grad-CAM Heatmap (PNG)**")
-            if st.button("Generate & Download Grad-CAM", use_container_width=True, key="export_gradcam_demo"):
-                try:
-                    overlay_data = st.session_state.prediction_data.get("overlay")
-                    if overlay_data:
-                        gradcam_bytes = generate_gradcam_png(overlay_data)
-                        st.session_state.gradcam_data = gradcam_bytes
-                        st.success("✅ Grad-CAM ready to download!")
-                    else:
-                        st.error("❌ No overlay data")
-                except Exception as e:
-                    st.error(f"❌ Error: {str(e)}")
-            
-            # Show download button if Grad-CAM data exists
-            if st.session_state.gradcam_data:
-                st.download_button(
-                    label="⬇️ Download Grad-CAM PNG",
-                    data=st.session_state.gradcam_data,
-                    file_name=f"gradcam_heatmap_{st.session_state.prediction_data['prediction']['label']}.png",
-                    mime="image/png",
-                    use_container_width=True,
-                    key="gradcam_download_btn_demo"
-                )
     
     else:
         st.info(
